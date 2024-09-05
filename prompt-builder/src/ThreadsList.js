@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Box, Button, TextField, List, ListItem, Typography, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
+import API_BASE_URL from './apiConfig';
 
 function ThreadsList({ onSelectThread, onDeleteThread }) {
   const [threads, setThreads] = useState([]);
   const [newThreadTitle, setNewThreadTitle] = useState('');
 
   useEffect(() => {
-    axios.get('http://wodv.de:5000/get_threads')
+    axios.get(API_BASE_URL + '/get_threads')
       .then((response) => setThreads(response.data))
       .catch((error) => console.error('Error fetching threads:', error));
   }, []);
@@ -16,7 +17,7 @@ function ThreadsList({ onSelectThread, onDeleteThread }) {
   const handleCreateThread = () => {
     if (newThreadTitle.trim() === '') return;
     
-    axios.post('http://wodv.de:5000/create_thread', { title: newThreadTitle })
+    axios.post(API_BASE_URL + '/create_thread', { title: newThreadTitle })
       .then((response) => {
         setThreads([...threads, { id: response.data.thread_id, title: newThreadTitle }]);
         setNewThreadTitle('');
@@ -25,7 +26,7 @@ function ThreadsList({ onSelectThread, onDeleteThread }) {
   };
 
   const handleDeleteThread = (threadId) => {
-    axios.delete(`http://wodv.de:5000/delete_thread/${threadId}`)
+    axios.delete(API_BASE_URL + `/delete_thread/${threadId}`)
       .then(() => {
         setThreads(threads.filter((thread) => thread.id !== threadId));
         onDeleteThread(threadId); // Notify parent that the thread was deleted

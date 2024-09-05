@@ -50,6 +50,15 @@ class Message(db.Model):
     content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
 
+class Workflow(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.String(500), nullable=True)
+    steps = db.Column(db.Text, nullable=False)  # JSON string with steps
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -238,10 +247,6 @@ def send_message():
         max_tokens=100
     )
     response_text = response.choices[0].message.content.strip()
-
-
-
-
     # Save the assistant's response
     new_response = Message(thread_id=thread_id, sender='assistant', content=response_text)
     db.session.add(new_response)
@@ -249,6 +254,66 @@ def send_message():
 
     return jsonify({"message": response_text}), 200
 
+@app.route('/create_workflow', methods=['POST'])
+@login_required
+def create_workflow():
+    data = request.get_json()
+    name = data.get('name')
+    description = data.get('description', '')
+    steps = data.get('steps')  # Steps as JSON string
+    
+    if not name or not steps:
+        return jsonify({"error": "Name and steps are required"}), 400
+    
+    new_workflow = Workflow(user_id=current_user.id, name=name, description=description, steps=steps)
+    db.session.add(new_workflow)
+    db.session.commit()
+    
+    return jsonify({"message": "Workflow created successfully", "workflow_id": new_workflow.id}), 201
+
+@app.route('/get_workflows', methods=['GET'])
+@login_required
+def get_workflows():
+    workflows = Workflow.query.filter_by(user_id=current_user.id).all()
+    workflows_data = [
+        {"id": w.id, "name": w.name, "description": w.description, "steps": w.steps, "timestamp": w.timestamp}
+        for w in workflows
+    ]
+    return jsonify(workflows_data), 200
+
+@app.route('/submit_workflow', methods=['POST'])
+@login_required
+def submit_workflow():
+    data = request.get_json()
+    steps = data.get('steps')
+    
+    if not steps:
+        return jsonify({"error": "No steps provided"}), 400
+
+    results = []
+    previous_output = None
+
+    # Verarbeite jeden Schritt nacheinander
+    for step in steps:
+        prompt = step
+        if previous_output:
+            prompt = prompt.replace('⬤', previous_output)
+        
+        # Sende das prompt an OpenAI
+        messages = [
+            {"role": "system", "content": "you are a helpful assistant"},
+            {"role": "user", "content": prompt},
+        ]
+
+        openai.api_key = current_user.api_key
+        response = openai.chat.completions.create(
+            model="gpt-4o", messages=messages, max_tokens=100
+        )
+        output = response.choices[0].message.content.strip()
+        results.append(output)
+        previous_output = output
+
+    return jsonify({"results": results}), 200
 
 
 if __name__ == "__main__":

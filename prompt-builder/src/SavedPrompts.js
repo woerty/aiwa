@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, List, ListItem, Button, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
+import API_BASE_URL from './apiConfig';
 
 function SavedPrompts({ onLoadPrompt }) {
   const [prompts, setPrompts] = useState([]);
@@ -12,13 +13,13 @@ function SavedPrompts({ onLoadPrompt }) {
   }, []);
 
   const fetchPrompts = () => {
-    axios.get('http://wodv.de:5000/get_prompts')
+    axios.get(API_BASE_URL + '/get_prompts')
       .then((response) => setPrompts(response.data))
       .catch((error) => console.error('Error fetching saved prompts:', error));
   };
 
   const handleDeletePrompt = (promptId) => {
-    axios.delete(`http://wodv.de:5000/delete_prompt/${promptId}`)
+    axios.delete(`API_BASE_URL/delete_prompt/${promptId}`)
       .then(() => {
         setPrompts(prompts.filter((prompt) => prompt.id !== promptId));
       })

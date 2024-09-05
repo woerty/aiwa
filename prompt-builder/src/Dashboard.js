@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 import ThreadsList from './ThreadsList';
 import Chat from './Chat';
 import SavedPrompts from './SavedPrompts';
+import API_BASE_URL from './apiConfig';
 
 function Dashboard() {
   const [selectedThreadId, setSelectedThreadId] = useState(null);

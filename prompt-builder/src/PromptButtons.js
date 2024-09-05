@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, Grid } from '@mui/material';
+import API_BASE_URL from './apiConfig';
 
 function PromptButtons({ handleSubmit, handleSavePrompt }) {
   return (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, List, ListItem } from '@mui/material';
 import axios from 'axios';
+import API_BASE_URL from './apiConfig';
 
 function Chat({ threadId }) {
   const [messages, setMessages] = useState([]);
@@ -8,7 +9,7 @@ function Chat({ threadId }) {
 
   useEffect(() => {
     if (threadId) {
-      axios.get(`http://wodv.de:5000/get_messages/${threadId}`)
+      axios.get(API_BASE_URL + `/get_messages/${threadId}`)
         .then((response) => setMessages(response.data))
         .catch((error) => console.error('Error fetching messages:', error));
     }
@@ -17,7 +18,7 @@ function Chat({ threadId }) {
   const handleSendMessage = () => {
     if (newMessage.trim() === '') return;
 
-    axios.post('http://wodv.de:5000/send_message', { thread_id: threadId, message: newMessage })
+    axios.post(API_BASE_URL + '/send_message', { thread_id: threadId, message: newMessage })
       .then((response) => {
         setMessages([...messages, { sender: 'user', content: newMessage }, { sender: 'assistant', content: response.data.message }]);
         setNewMessage(''); // Clear input field after sending
