@@ -37,6 +37,19 @@ class Prompt(db.Model):
     prompt_text = db.Column(db.String(500), nullable=False)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
 
+class Thread(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(150), nullable=False)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    thread_id = db.Column(db.Integer, db.ForeignKey('thread.id'), nullable=False)
+    sender = db.Column(db.String(50), nullable=False)  # 'user' or 'assistant'
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -151,6 +164,91 @@ def get_prompts():
     ]
 
     return jsonify(prompts_data), 200
+
+@app.route('/create_thread', methods=['POST'])
+@login_required
+def create_thread():
+    data = request.get_json()
+    title = data.get('title')
+
+    if not title:
+        return jsonify({"error": "Title is required"}), 400
+
+    new_thread = Thread(user_id=current_user.id, title=title)
+    db.session.add(new_thread)
+    db.session.commit()
+
+    return jsonify({"message": "Thread created successfully", "thread_id": new_thread.id}), 201
+
+@app.route('/get_threads', methods=['GET'])
+@login_required
+def get_threads():
+    threads = Thread.query.filter_by(user_id=current_user.id).all()
+    threads_data = [{"id": thread.id, "title": thread.title, "timestamp": thread.timestamp} for thread in threads]
+
+    return jsonify(threads_data), 200
+
+@app.route('/get_messages/<int:thread_id>', methods=['GET'])
+@login_required
+def get_messages(thread_id):
+    messages = Message.query.filter_by(thread_id=thread_id).all()
+    messages_data = [{"sender": msg.sender, "content": msg.content, "timestamp": msg.timestamp} for msg in messages]
+
+    return jsonify(messages_data), 200
+
+@app.route('/delete_thread/<int:thread_id>', methods=['DELETE'])
+@login_required
+def delete_thread(thread_id):
+    thread = Thread.query.get(thread_id)
+    if not thread or thread.user_id != current_user.id:
+        return jsonify({"error": "Thread not found or unauthorized"}), 404
+
+    # Lösche alle zugehörigen Nachrichten
+    Message.query.filter_by(thread_id=thread_id).delete()
+
+    db.session.delete(thread)
+    db.session.commit()
+    return jsonify({"message": "Thread deleted successfully"}), 200
+
+
+@app.route('/send_message', methods=['POST'])
+@login_required
+def send_message():
+    data = request.get_json()
+    thread_id = data.get('thread_id')
+    user_message = data.get('message')
+
+    if not user_message:
+        return jsonify({"error": "Message is required"}), 400
+
+    # Save the user's message
+    new_message = Message(thread_id=thread_id, sender='user', content=user_message)
+    db.session.add(new_message)
+    db.session.commit()
+
+    # Prepare the chat history for the assistant
+    messages = Message.query.filter_by(thread_id=thread_id).all()
+    chat_history = [{'role': 'user' if msg.sender == 'user' else 'assistant', 'content': msg.content} for msg in messages]
+
+    # Call the OpenAI API with the chat history
+    openai.api_key = current_user.api_key
+    response = openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=chat_history,
+        max_tokens=100
+    )
+    response_text = response.choices[0].message.content.strip()
+
+
+
+
+    # Save the assistant's response
+    new_response = Message(thread_id=thread_id, sender='assistant', content=response_text)
+    db.session.add(new_response)
+    db.session.commit()
+
+    return jsonify({"message": response_text}), 200
+
 
 
 if __name__ == "__main__":
