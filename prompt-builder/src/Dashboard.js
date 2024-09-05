@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { TextField, Button, Box, Typography, Card, CardContent, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { TextField, Button, Box, Typography, Card, CardContent } from '@mui/material';
+import SavedPrompts from './SavedPrompts'; // Import the new component
 
 axios.defaults.withCredentials = true;
 
@@ -9,12 +10,25 @@ function Dashboard() {
   const [prompt, setPrompt] = useState('');
   const [response, setResponse] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [prompts, setPrompts] = useState([]); // State to store the list of saved prompts
   const navigate = useNavigate();
+
+  // Fetch the saved prompts
+  const fetchPrompts = () => {
+    axios.get('http://wodv.de:5000/get_prompts')
+      .then((response) => {
+        setPrompts(response.data);
+      })
+      .catch((error) => {
+        console.error('Error fetching prompts:', error);
+      });
+  };
 
   useEffect(() => {
     axios.get('http://wodv.de:5000/api/user-info')
       .then((response) => {
         setApiKey(response.data.api_key);
+        fetchPrompts(); // Fetch prompts on component mount
       })
       .catch((error) => {
         console.error('Error fetching API key:', error);
@@ -40,9 +54,40 @@ function Dashboard() {
         prompt,
       });
       setResponse(result.data.response);
+      fetchPrompts(); // Fetch prompts after submitting
     } catch (error) {
       console.error('Error sending prompt:', error);
     }
+  };
+
+  const handleSavePrompt = async () => {
+    if (!prompt) {
+      alert("Please enter a prompt before saving.");
+      return;
+    }
+    try {
+      await axios.post('http://wodv.de:5000/save_prompt', {
+        prompt,
+      });
+      //alert("Prompt saved successfully!");
+      fetchPrompts(); // Fetch prompts after saving
+    } catch (error) {
+      console.error('Error saving prompt:', error);
+    }
+  };
+
+  const handleDeletePrompt = async (promptId) => {
+    try {
+      await axios.delete(`http://wodv.de:5000/delete_prompt/${promptId}`);
+      //alert("Prompt deleted successfully!");
+      fetchPrompts(); // Fetch prompts after deleting
+    } catch (error) {
+      console.error('Error deleting prompt:', error);
+    }
+  };
+
+  const handleLoadPrompt = (loadedPrompt) => {
+    setPrompt(loadedPrompt); // Load the selected prompt into the input field
   };
 
   return (
@@ -68,15 +113,28 @@ function Dashboard() {
           onChange={(e) => setPrompt(e.target.value)}
           required
         />
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          fullWidth
-          sx={{ mt: 2 }}
-        >
-          Submit Prompt
-        </Button>
+        <Grid container spacing={2} sx={{ mt: 2 }}>
+          <Grid item xs={6}>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+            >
+              Submit Prompt
+            </Button>
+          </Grid>
+          <Grid item xs={6}>
+            <Button
+              onClick={handleSavePrompt}
+              variant="outlined"
+              color="secondary"
+              fullWidth
+            >
+              Save Prompt
+            </Button>
+          </Grid>
+        </Grid>
       </form>
       {response && (
         <Card sx={{ mt: 4 }}>
@@ -86,6 +144,10 @@ function Dashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Pass prompts state, handleDeletePrompt, and handleLoadPrompt to SavedPrompts component */}
+      <SavedPrompts prompts={prompts} onDelete={handleDeletePrompt} onLoad={handleLoadPrompt} />
+
       <Button
         onClick={handleLogout}
         variant="contained"
