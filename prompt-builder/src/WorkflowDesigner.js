@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Box, Typography, CircularProgress, List, ListItem, ListItemText, IconButton, Grid, Paper } from '@mui/material';
+import { TextField, Button, Box, Typography, CircularProgress, List, ListItem, ListItemText, IconButton, Grid2, Paper } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import MessageList from './MessageList'; // Import the MessageList component
@@ -123,37 +123,18 @@ function WorkflowDesigner({ loadedWorkflow }) {
   };
 
   return (
-    <Box sx={{ padding: 4 }}>
-      <Grid container spacing={4}>
-        {/* Workflow details */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ padding: 2 }}>
-            <Typography variant="h6">Workflow Information</Typography>
-            <TextField
-              fullWidth
-              value={workflowName}
-              onChange={(e) => setWorkflowName(e.target.value)}
-              label="Workflow Name"
-              variant="outlined"
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              value={workflowDescription}
-              onChange={(e) => setWorkflowDescription(e.target.value)}
-              label="Description"
-              variant="outlined"
-              sx={{ mb: 2 }}
-            />
-            <Button variant="contained" color="secondary" onClick={handleSaveWorkflow}>
-              Save Workflow
-            </Button>
-          </Paper>
-        </Grid>
+    <Grid2 container spacing={4}>
+      {/* Left Column */}
 
-        {/* Steps Section */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ padding: 2 }}>
+
+
+      {/* Right Column */}
+      <Grid2 item xs={12} md={8}>
+        {/* Message List Section */}
+
+        {/* Workflow Steps */}<Grid2 item xs={12} md={8}>
+          {/* Steps Section */}
+          <Paper sx={{ padding: 2, mb: 4 }}>
             <Typography variant="h6">Workflow Steps</Typography>
             {steps.map((step, index) => (
               <Box key={index} sx={{ mb: 2 }}>
@@ -178,14 +159,26 @@ function WorkflowDesigner({ loadedWorkflow }) {
               variant="outlined"
               sx={{ mb: 2 }}
             />
-            <Button variant="contained" onClick={handleAddStep}>
-              Add Step
-            </Button>
-          </Paper>
-        </Grid>
+            <Grid2 container spacing={2}>
+              <Button variant="contained" onClick={handleAddStep}>
+                Add Step
+              </Button>
+              <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
+                {isLoading ? <CircularProgress size={24} /> : "Run! 🚀"}
+              </Button>
+            </Grid2>
 
-        {/* File Upload Section */}
-        <Grid item xs={12} md={6}>
+          </Paper>
+
+          <Paper sx={{ padding: 2, mb: 4 }}>
+            <Typography variant="h6">Messages</Typography>
+            <MessageList messages={messages} /> {/* Display the list of messages */}
+          </Paper>
+        </Grid2>
+
+
+        <Grid2 item xs={12} md={4}>
+          {/* File Upload Section */}
           <Paper sx={{ padding: 2 }}>
             <Typography variant="h6">Upload a File</Typography>
             <input
@@ -207,6 +200,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
             >
               Upload File
             </Button>
+
             {/* Display list of files on server */}
             <Box sx={{ mt: 4 }}>
               <Typography variant="h6">Files on Server:</Typography>
@@ -224,6 +218,8 @@ function WorkflowDesigner({ loadedWorkflow }) {
                 ))}
               </List>
             </Box>
+
+            {/* Display list of uploaded files */}
             <Box sx={{ mt: 2 }}>
               <Typography variant="h6">Uploaded Files:</Typography>
               <List>
@@ -238,26 +234,37 @@ function WorkflowDesigner({ loadedWorkflow }) {
               </List>
             </Box>
           </Paper>
-        </Grid>
+        </Grid2>
 
-        {/* Message List Section */}
-        <Grid item xs={12}>
-          <Paper sx={{ padding: 2 }}>
-            <Typography variant="h6">Messages</Typography>
-            <MessageList messages={messages} /> {/* Display the list of messages */}
-          </Paper>
-        </Grid>
-
-        {/* Results Section */}
-        <Grid item xs={12}>
-          <Paper sx={{ padding: 2 }}>
-            <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
-              {isLoading ? <CircularProgress size={24} /> : "Run! 🚀"}
-            </Button>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+      </Grid2>
+      <Grid2 item xs={12} md={4}>
+        {/* Workflow details */}
+        <Paper sx={{
+          padding: 2, mb: 4
+        }}>
+          <Typography variant="h6">Workflow Information</Typography>
+          <TextField
+            fullWidth
+            value={workflowName}
+            onChange={(e) => setWorkflowName(e.target.value)}
+            label="Workflow Name"
+            variant="outlined"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            value={workflowDescription}
+            onChange={(e) => setWorkflowDescription(e.target.value)}
+            label="Description"
+            variant="outlined"
+            sx={{ mb: 2 }}
+          />
+          <Button variant="contained" color="secondary" onClick={handleSaveWorkflow}>
+            Save Workflow
+          </Button>
+        </Paper>
+      </Grid2>
+    </Grid2>
   );
 }
 

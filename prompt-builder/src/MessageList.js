@@ -1,7 +1,9 @@
 import React from 'react';
-import { List, ListItem, ListItemAvatar, Avatar, ListItemText, Typography, Paper } from '@mui/material';
+import { List, ListItem, ListItemAvatar, Avatar, ListItemText, Paper, Typography } from '@mui/material';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';  // Importiere das remark-gfm Plugin
 
 function MessageList({ messages }) {
   return (
@@ -18,7 +20,7 @@ function MessageList({ messages }) {
               primary={message.sender === 'user' ? "Prompt" : "Response"}
               secondary={
                 <Typography variant="body2" color="textPrimary">
-                  {message.text}
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>  {/* Render Markdown with GFM support */}
                 </Typography>
               }
             />
