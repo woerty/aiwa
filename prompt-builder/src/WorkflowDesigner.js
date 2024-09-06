@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Box, Typography, CircularProgress, List, ListItem, ListItemText, IconButton, Grid2, Paper } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { Grid2, Paper, Button, CircularProgress, Typography } from '@mui/material';
 import axios from 'axios';
-import MessageList from './MessageList'; // Import the MessageList component
+import MessageList from './MessageList';
+import FileUploadSection from './FileUploadSection';
+import StepsSection from './StepsSection';
+import WorkflowDetails from './WorkflowDetails';
+import WorkflowVisualization from './WorkflowVisualization';
 
 function WorkflowDesigner({ loadedWorkflow }) {
   const [steps, setSteps] = useState([]);
@@ -14,7 +17,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [serverFiles, setServerFiles] = useState([]);
-  const [messages, setMessages] = useState([]); // State for the messages
+  const [messages, setMessages] = useState([]);
 
   useEffect(() => {
     if (loadedWorkflow) {
@@ -31,6 +34,15 @@ function WorkflowDesigner({ loadedWorkflow }) {
       setServerFiles(response.data);
     } catch (error) {
       console.error('Error fetching files:', error);
+    }
+  };
+  const handleDeleteFile = async (filename) => {
+    try {
+      await axios.post('http://wodv.de:5000/delete_file', { filename });
+      alert('File deleted successfully!');
+      fetchServerFiles(); // Refresh the server files list
+    } catch (error) {
+      console.error('Error deleting file:', error);
     }
   };
 
@@ -74,16 +86,6 @@ function WorkflowDesigner({ loadedWorkflow }) {
     setUploadedFiles(uploadedFiles.filter(file => file.name !== fileName));
   };
 
-  const handleDeleteFile = async (filename) => {
-    try {
-      await axios.post('http://wodv.de:5000/delete_file', { filename });
-      alert('File deleted successfully!');
-      fetchServerFiles(); // Refresh the server files list
-    } catch (error) {
-      console.error('Error deleting file:', error);
-    }
-  };
-
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
@@ -98,7 +100,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
         newMessages.push({ sender: 'assistant', text: `${response.data.results[index]}` });
       });
 
-      setMessages([...messages, ...newMessages]); // Add the new messages to the message list
+      setMessages([...messages, ...newMessages]);
       setResults(response.data.results);
     } catch (error) {
       console.error('Error submitting workflow:', error);
@@ -124,26 +126,22 @@ function WorkflowDesigner({ loadedWorkflow }) {
     }
   };
 
-  // Function to insert output symbol (📄)
   const handleInsertOutputSymbol = (index) => {
     const updatedSteps = [...steps];
     updatedSteps[index] = `${updatedSteps[index]} 📄`;
     setSteps(updatedSteps);
   };
 
-  // Function to insert file symbol (🗄️)
   const handleInsertFileSymbol = (index) => {
     const updatedSteps = [...steps];
     updatedSteps[index] = `${updatedSteps[index]} 🗄️`;
     setSteps(updatedSteps);
   };
 
-  // Clear messages function
   const handleClearMessages = () => {
-    setMessages([]); // Clear the message list
+    setMessages([]);
   };
 
-  // Clear workflow function
   const handleClearWorkflow = () => {
     setWorkflowName('');
     setWorkflowDescription('');
@@ -155,162 +153,66 @@ function WorkflowDesigner({ loadedWorkflow }) {
     <Grid2 container spacing={4}>
       {/* Left Column */}
 
-
-
-      {/* Right Column */}
-      <Grid2 item xs={12} md={8}>
-        {/* Message List Section */}
-
-        {/* Workflow Steps */}
-        <Grid2 item xs={12} md={8}>
-          {/* Steps Section */}
-          <Paper sx={{ padding: 2, mb: 4 }}>
-            <Typography variant="h6">Workflow Steps</Typography>
-            {steps.map((step, index) => (
-              <Box key={index} sx={{ mb: 2 }}>
-                <TextField
-                  fullWidth
-                  value={step}
-                  onChange={(e) => {
-                    const updatedSteps = [...steps];
-                    updatedSteps[index] = e.target.value;
-                    setSteps(updatedSteps);
-                  }}
-                  label={`Step ${index + 1}`}
-                  variant="outlined"
-                />
-                {/* Buttons to insert symbols */}
-                <Button onClick={() => handleInsertOutputSymbol(index)} sx={{ ml: 2 }}>
-                  Insert Output 📄
-                </Button>
-                <Button onClick={() => handleInsertFileSymbol(index)} sx={{ ml: 2 }}>
-                  Insert File 🗄️
-                </Button>
-              </Box>
-            ))}
-            <TextField
-              fullWidth
-              value={currentStep}
-              onChange={(e) => setCurrentStep(e.target.value)}
-              label="New Step"
-              variant="outlined"
-              sx={{ mb: 2 }}
-            />
-            <Grid2 container spacing={2}>
-              <Button variant="contained" onClick={handleAddStep}>
-                Add Step
-              </Button>
-              <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? <CircularProgress size={24} /> : "Run! 🚀"}
-              </Button>
-
-              <Button variant="contained" color="secondary" onClick={handleClearWorkflow}>
-                Clear Workflow
-              </Button>
-            </Grid2>
-
-          </Paper>
-
-          <Paper sx={{ padding: 2, mb: 4 }}>
-            <Typography variant="h6">Messages</Typography>
-            <MessageList messages={messages} /> {/* Display the list of messages */}
-            <Button variant="contained" color="secondary" onClick={handleClearMessages} sx={{ mt: 2 }}>
-              Clear Messages
-            </Button>
-          </Paper>
-        </Grid2>
-
-
-        <Grid2 item xs={12} md={4}>
-          {/* File Upload Section */}
-          <Paper sx={{ padding: 2 }}>
-            <Typography variant="h6">Upload a File</Typography>
-            <input
-              type="file"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-              id="fileInput"
-            />
-            <label htmlFor="fileInput">
-              <Button variant="contained" component="span">
-                Select File
-              </Button>
-            </label>
-            <Button
-              variant="contained"
-              onClick={handleFileUpload}
-              sx={{ ml: 2 }}
-              disabled={!selectedFile}
-            >
-              Upload File
-            </Button>
-
-            {/* Display list of files on server */}
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="h6">Files on Server:</Typography>
-              <List>
-                {serverFiles.map((file, index) => (
-                  <ListItem key={index}>
-                    <ListItemText primary={file} />
-                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteFile(file)}>
-                      <DeleteIcon />
-                    </IconButton>
-                    <Button variant="contained" onClick={() => setUploadedFiles([...uploadedFiles, { name: file, path: `uploads/${file}` }])} sx={{ ml: 2 }}>
-                      Add to Workflow
-                    </Button>
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-
-            {/* Display list of uploaded files */}
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="h6">Uploaded Files:</Typography>
-              <List>
-                {uploadedFiles.map((file, index) => (
-                  <ListItem key={index}>
-                    <ListItemText primary={file.name} />
-                    <IconButton edge="end" aria-label="delete" onClick={() => handleRemoveFileFromList(file.name)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          </Paper>
-        </Grid2>
-
-      </Grid2>
       <Grid2 item xs={12} md={4}>
-        {/* Workflow details */}
-        <Paper sx={{
-          padding: 2, mb: 4
-        }}>
-          <Typography variant="h6">Workflow Information</Typography>
-          <TextField
-            fullWidth
-            value={workflowName}
-            onChange={(e) => setWorkflowName(e.target.value)}
-            label="Workflow Name"
-            variant="outlined"
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            value={workflowDescription}
-            onChange={(e) => setWorkflowDescription(e.target.value)}
-            label="Description"
-            variant="outlined"
-            sx={{ mb: 2 }}
-          />
-          <Grid2 container spacing={2}>
-            <Button variant="contained" color="secondary" onClick={handleSaveWorkflow}>
-              Save Workflow
-            </Button>
-            <Button variant="contained" color="secondary" onClick={handleClearWorkflow}>
-              Clear Workflow
-            </Button>
-          </Grid2>
+        <WorkflowDetails
+          workflowName={workflowName}
+          setWorkflowName={setWorkflowName}
+          workflowDescription={workflowDescription}
+          setWorkflowDescription={setWorkflowDescription}
+          handleSaveWorkflow={handleSaveWorkflow}
+          handleClearWorkflow={handleClearWorkflow}
+        />
+      </Grid2>
+
+      {/* Steps Section */}
+      <Grid2 item xs={12} md={8}>
+        <StepsSection
+          steps={steps}
+          currentStep={currentStep}
+          setSteps={setSteps}
+          setCurrentStep={setCurrentStep}
+          handleAddStep={handleAddStep}
+          handleInsertOutputSymbol={handleInsertOutputSymbol}
+          handleInsertFileSymbol={handleInsertFileSymbol}
+        />
+      </Grid2>
+
+      {/* File Upload Section */}
+      <Grid2 item xs={12} md={4}>
+        <FileUploadSection
+          serverFiles={serverFiles}
+          uploadedFiles={uploadedFiles}
+          handleFileChange={handleFileChange}
+          handleFileUpload={handleFileUpload}
+          handleDeleteFile={handleDeleteFile}
+          handleRemoveFileFromList={handleRemoveFileFromList}
+          selectedFile={selectedFile}
+          setUploadedFiles={setUploadedFiles}
+        />
+      </Grid2>
+
+      {/* Message List Section */}
+      <Grid2 item xs={12} md={8}>
+        <Paper sx={{ padding: 2, mb: 4 }}>
+          <Typography variant="h6">Messages</Typography>
+          <MessageList messages={messages} /> {/* Display the list of messages */}
+          <Button variant="contained" color="secondary" onClick={handleClearMessages} sx={{ mt: 2 }}>
+            Clear Messages
+          </Button>
+        </Paper>
+
+        {/* Run Button */}
+        <Paper sx={{ padding: 2 }}>
+          <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
+            {isLoading ? <CircularProgress size={24} /> : "Run! 🚀"}
+          </Button>
+        </Paper>
+      </Grid2>
+
+      <Grid2 item xs={12} md={8}>
+        <Paper sx={{ padding: 2, mb: 4 }}>
+          <Typography variant="h6">Workflow Visualization</Typography>
+          <WorkflowVisualization steps={steps} uploadedFiles={uploadedFiles} />
         </Paper>
       </Grid2>
     </Grid2>
