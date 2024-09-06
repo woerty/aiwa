@@ -11,12 +11,16 @@ from flask_login import (
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
-
+import os
+from PyPDF2 import PdfReader
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 app.config["SECRET_KEY"] = "420420420"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
+app.config['UPLOAD_FOLDER'] = 'uploads/'
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -63,6 +67,19 @@ class Workflow(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+# Function to extract text from PDF
+def extract_text_from_pdf(pdf_path):
+    reader = PdfReader(pdf_path)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text()
+    return text
+
+def process_pdf(file_path):
+    text = extract_text_from_pdf(file_path)
+    return text
 
 
 @app.route('/register', methods=['POST', 'OPTIONS'])
@@ -362,6 +379,69 @@ def submit_workflow():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    if file:
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(file_path)
+        return jsonify({"message": "File uploaded successfully", "file_path": file_path}), 200
+
+def process_workflow_steps(steps, file_content):
+    results = []
+    previous_output = None
+
+    for step in steps:
+        prompt = step
+        if previous_output:
+            prompt = prompt.replace('📄', previous_output)
+
+        if file_content:
+            prompt = prompt.replace('🗄️', file_content)
+
+        messages = [
+            {"role": "system", "content": "you are a helpful assistant"},
+            {"role": "user", "content": prompt},
+        ]
+        
+        openai.api_key = current_user.api_key
+        print("sending messages: ", messages)
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini", messages=messages, max_tokens=1000
+        )
+        output = response.choices[0].message.content.strip()
+        results.append(output)
+        previous_output = output
+
+    return results
+
+@app.route('/process', methods=['POST'])
+def process_workflow():
+    try:
+        data = request.json
+        steps = data.get('steps', [])
+        file_path = data.get('file_path', None)
+
+        file_content = ""
+        if file_path:
+            _, file_extension = os.path.splitext(file_path)
+            if file_extension.lower() == '.pdf':
+                file_content = process_pdf(file_path)
+            else:
+                # Handle other file types if necessary
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    file_content = file.read()
+
+        results = process_workflow_steps(steps, file_content)
+        return jsonify({"results": results}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     with app.app_context():

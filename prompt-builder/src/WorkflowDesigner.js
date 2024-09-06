@@ -8,14 +8,15 @@ function WorkflowDesigner({ loadedWorkflow }) {
   const [results, setResults] = useState([]);
   const [workflowName, setWorkflowName] = useState('');
   const [workflowDescription, setWorkflowDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // Neuer Ladezustand
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null); // State for selected file
+  const [uploadedFilePath, setUploadedFilePath] = useState(''); // State for uploaded file path
 
-  // Effekt, um die geladenen Workflow-Daten zu setzen
   useEffect(() => {
     if (loadedWorkflow) {
       setWorkflowName(loadedWorkflow.name);
       setWorkflowDescription(loadedWorkflow.description);
-      setSteps(JSON.parse(loadedWorkflow.steps));  // Falls die Schritte als JSON gespeichert sind
+      setSteps(JSON.parse(loadedWorkflow.steps));
     }
   }, [loadedWorkflow]);
 
@@ -26,22 +27,59 @@ function WorkflowDesigner({ loadedWorkflow }) {
     }
   };
 
-  const handleInsertSymbol = (index) => {
+  const handleInsertOutputSymbol = (index) => {
     const updatedSteps = [...steps];
     const newText = `${updatedSteps[index]} 📄`;
     updatedSteps[index] = newText;
     setSteps(updatedSteps);
   };
 
-  const handleSubmit = async () => {
-    setIsLoading(true); // Ladezustand aktivieren
+  const handleInsertFileSymbol = (index) => {
+    const updatedSteps = [...steps];
+    const newText = `${updatedSteps[index]} 🗄️`;
+    updatedSteps[index] = newText;
+    setSteps(updatedSteps);
+  };
+
+  const handleFileChange = (event) => {
+    setSelectedFile(event.target.files[0]);
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
+  
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+  
     try {
-      const response = await axios.post('http://wodv.de:5000/submit_workflow', { steps });
+      setIsLoading(true);
+      const response = await axios.post('http://wodv.de:5000/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      setUploadedFilePath(response.data.file_path);
+      alert('File uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.post('http://wodv.de:5000/process', {
+        steps,
+        file_path: uploadedFilePath,
+      });
       setResults(response.data.results);
     } catch (error) {
       console.error('Error submitting workflow:', error);
     }
-    setIsLoading(false); // Ladezustand deaktivieren
+    setIsLoading(false);
   };
 
   const handleSaveWorkflow = async () => {
@@ -64,8 +102,6 @@ function WorkflowDesigner({ loadedWorkflow }) {
 
   return (
     <Box>
-
-      {/* Eingabe für Workflow-Name */}
       <TextField
         fullWidth
         value={workflowName}
@@ -74,8 +110,6 @@ function WorkflowDesigner({ loadedWorkflow }) {
         variant="outlined"
         sx={{ mb: 2 }}
       />
-
-      {/* Eingabe für Workflow-Beschreibung */}
       <TextField
         fullWidth
         value={workflowDescription}
@@ -84,8 +118,6 @@ function WorkflowDesigner({ loadedWorkflow }) {
         variant="outlined"
         sx={{ mb: 2 }}
       />
-
-      {/* Schritte */}
       {steps.map((step, index) => (
         <Box key={index} sx={{ mb: 2 }}>
           <TextField
@@ -99,13 +131,14 @@ function WorkflowDesigner({ loadedWorkflow }) {
             label={`Step ${index + 1}`}
             variant="outlined"
           />
-          <Button onClick={() => handleInsertSymbol(index)} sx={{ ml: 2 }}>
+          <Button onClick={() => handleInsertOutputSymbol(index)} sx={{ ml: 2 }}>
             Vorherigen Output einfügen
+          </Button>
+          <Button onClick={() => handleInsertFileSymbol(index)} sx={{ ml: 2 }}>
+            Datei Output einfügen
           </Button>
         </Box>
       ))}
-
-      {/* Neuen Schritt hinzufügen */}
       <TextField
         fullWidth
         value={currentStep}
@@ -117,26 +150,24 @@ function WorkflowDesigner({ loadedWorkflow }) {
       <Button variant="contained" onClick={handleAddStep} sx={{ mr: 2 }}>
         Step hinzufügen
       </Button>
-
-      {/* Workflow speichern */}
       <Button variant="contained" color="secondary" onClick={handleSaveWorkflow} sx={{ mr: 2 }}>
         Save
       </Button>
-
-      {/* Workflow ausführen */}
+      <input type="file" onChange={handleFileChange} style={{ display: 'none' }} id="fileInput" />
+      <label htmlFor="fileInput">
+        <Button variant="contained" component="span" onClick={handleFileUpload} sx={{ mr: 2 }}>
+          Upload File
+        </Button>
+      </label>
       <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
         {isLoading ? "Running..." : "Run! 🚀"}
       </Button>
-
-      {/* Ladeanimation anzeigen */}
       {isLoading && (
         <Box sx={{ mt: 4 }}>
           <CircularProgress />
           <Typography variant="body1">Processing workflow...</Typography>
         </Box>
       )}
-
-      {/* Ergebnisse anzeigen */}
       {!isLoading && results.length > 0 && (
         <Box sx={{ mt: 4 }}>
           <Typography variant="h6">Results</Typography>
