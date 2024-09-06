@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TextField, Button, Box, Typography, CircularProgress, List, ListItem, ListItemText, IconButton, Grid, Paper } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
+import MessageList from './MessageList'; // Import the MessageList component
 
 function WorkflowDesigner({ loadedWorkflow }) {
   const [steps, setSteps] = useState([]);
@@ -13,6 +14,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [serverFiles, setServerFiles] = useState([]);
+  const [messages, setMessages] = useState([]); // State for the messages
 
   useEffect(() => {
     if (loadedWorkflow) {
@@ -37,20 +39,6 @@ function WorkflowDesigner({ loadedWorkflow }) {
       setSteps([...steps, currentStep]);
       setCurrentStep('');
     }
-  };
-
-  const handleInsertOutputSymbol = (index) => {
-    const updatedSteps = [...steps];
-    const newText = `${updatedSteps[index]} 📄`;
-    updatedSteps[index] = newText;
-    setSteps(updatedSteps);
-  };
-
-  const handleInsertFileSymbol = (index) => {
-    const updatedSteps = [...steps];
-    const newText = `${updatedSteps[index]} 🗄️`;
-    updatedSteps[index] = newText;
-    setSteps(updatedSteps);
   };
 
   const handleFileChange = (event) => {
@@ -82,20 +70,18 @@ function WorkflowDesigner({ loadedWorkflow }) {
     }
   };
 
+  const handleRemoveFileFromList = (fileName) => {
+    setUploadedFiles(uploadedFiles.filter(file => file.name !== fileName));
+  };
   const handleDeleteFile = async (filename) => {
     try {
       await axios.post('http://wodv.de:5000/delete_file', { filename });
       alert('File deleted successfully!');
-      fetchServerFiles();
+      fetchServerFiles(); // Refresh the server files list
     } catch (error) {
       console.error('Error deleting file:', error);
     }
   };
-
-  const handleRemoveFileFromList = (fileName) => {
-    setUploadedFiles(uploadedFiles.filter(file => file.name !== fileName));
-  };
-
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
@@ -103,6 +89,14 @@ function WorkflowDesigner({ loadedWorkflow }) {
         steps,
         file_path: uploadedFiles.length > 0 ? uploadedFiles[0].path : '',
       });
+
+      const newMessages = [];
+      steps.forEach((step, index) => {
+        newMessages.push({ sender: 'user', text: `${step}` });
+        newMessages.push({ sender: 'assistant', text: `${response.data.results[index]}` });
+      });
+
+      setMessages([...messages, ...newMessages]); // Add the new messages to the message list
       setResults(response.data.results);
     } catch (error) {
       console.error('Error submitting workflow:', error);
@@ -174,12 +168,6 @@ function WorkflowDesigner({ loadedWorkflow }) {
                   label={`Step ${index + 1}`}
                   variant="outlined"
                 />
-                <Button onClick={() => handleInsertOutputSymbol(index)} sx={{ ml: 2 }}>
-                  Insert Output 📄
-                </Button>
-                <Button onClick={() => handleInsertFileSymbol(index)} sx={{ ml: 2 }}>
-                  Insert File 🗄️
-                </Button>
               </Box>
             ))}
             <TextField
@@ -219,45 +207,44 @@ function WorkflowDesigner({ loadedWorkflow }) {
             >
               Upload File
             </Button>
-            {selectedFile && (
-              <Typography variant="body1" sx={{ mt: 2 }}>
-                Selected file: {selectedFile.name}
-              </Typography>
-            )}
-            <List>
-              {uploadedFiles.map((file, index) => (
-                <ListItem key={index}>
-                  <ListItemText primary={file.name} />
-                  <IconButton edge="end" onClick={() => handleRemoveFileFromList(file.name)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItem>
-              ))}
-            </List>
+            {/* Display list of files on server */}
+            <Box sx={{ mt: 4 }}>
+              <Typography variant="h6">Files on Server:</Typography>
+              <List>
+                {serverFiles.map((file, index) => (
+                  <ListItem key={index}>
+                    <ListItemText primary={file} />
+                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteFile(file)}>
+                      <DeleteIcon />
+                    </IconButton>
+                    <Button variant="contained" onClick={() => setUploadedFiles([...uploadedFiles, { name: file, path: `uploads/${file}` }])} sx={{ ml: 2 }}>
+                      Add to Workflow
+                    </Button>
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6">Uploaded Files:</Typography>
+              <List>
+                {uploadedFiles.map((file, index) => (
+                  <ListItem key={index}>
+                    <ListItemText primary={file.name} />
+                    <IconButton edge="end" aria-label="delete" onClick={() => handleRemoveFileFromList(file.name)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
           </Paper>
         </Grid>
 
-        {/* Server Files Section */}
-        <Grid item xs={12} md={6}>
+        {/* Message List Section */}
+        <Grid item xs={12}>
           <Paper sx={{ padding: 2 }}>
-            <Typography variant="h6">Files on Server</Typography>
-            <List>
-              {serverFiles.map((file, index) => (
-                <ListItem key={index}>
-                  <ListItemText primary={file} />
-                  <IconButton edge="end" onClick={() => handleDeleteFile(file)}>
-                    <DeleteIcon />
-                  </IconButton>
-                  <Button
-                    variant="contained"
-                    onClick={() => setUploadedFiles([...uploadedFiles, { name: file, path: `uploads/${file}` }])}
-                    sx={{ ml: 2 }}
-                  >
-                    Add to Workflow
-                  </Button>
-                </ListItem>
-              ))}
-            </List>
+            <Typography variant="h6">Messages</Typography>
+            <MessageList messages={messages} /> {/* Display the list of messages */}
           </Paper>
         </Grid>
 
@@ -267,17 +254,6 @@ function WorkflowDesigner({ loadedWorkflow }) {
             <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
               {isLoading ? <CircularProgress size={24} /> : "Run! 🚀"}
             </Button>
-            {results.length > 0 && (
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h6">Results</Typography>
-                {results.map((result, index) => (
-                  <Typography key={index} variant="body1">
-                    Step {index + 1}: {steps[index]} <br />
-                    Result: {result}
-                  </Typography>
-                ))}
-              </Box>
-            )}
           </Paper>
         </Grid>
       </Grid>
