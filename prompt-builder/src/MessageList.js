@@ -16,6 +16,8 @@ function MessageList({ messages }) {
                 {message.sender === 'user' ? <AccountCircleIcon /> : <SmartToyIcon />}
               </Avatar>
             </ListItemAvatar>
+            <Paper sx={{ p: 1, borderRadius: 1, backgroundColor: message.sender === 'user' ? '#f0f0f0' : '#e0f7fa' }}>
+            
             <ListItemText
               primary={message.sender === 'user' ? "Prompt" : "Response"}
               secondary={
@@ -24,6 +26,8 @@ function MessageList({ messages }) {
                 </Typography>
               }
             />
+            </Paper>
+
           </ListItem>
         ))}
       </List>

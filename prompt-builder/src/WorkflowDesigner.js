@@ -73,6 +73,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
   const handleRemoveFileFromList = (fileName) => {
     setUploadedFiles(uploadedFiles.filter(file => file.name !== fileName));
   };
+
   const handleDeleteFile = async (filename) => {
     try {
       await axios.post('http://wodv.de:5000/delete_file', { filename });
@@ -82,6 +83,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
       console.error('Error deleting file:', error);
     }
   };
+
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
@@ -122,6 +124,33 @@ function WorkflowDesigner({ loadedWorkflow }) {
     }
   };
 
+  // Function to insert output symbol (📄)
+  const handleInsertOutputSymbol = (index) => {
+    const updatedSteps = [...steps];
+    updatedSteps[index] = `${updatedSteps[index]} 📄`;
+    setSteps(updatedSteps);
+  };
+
+  // Function to insert file symbol (🗄️)
+  const handleInsertFileSymbol = (index) => {
+    const updatedSteps = [...steps];
+    updatedSteps[index] = `${updatedSteps[index]} 🗄️`;
+    setSteps(updatedSteps);
+  };
+
+  // Clear messages function
+  const handleClearMessages = () => {
+    setMessages([]); // Clear the message list
+  };
+
+  // Clear workflow function
+  const handleClearWorkflow = () => {
+    setWorkflowName('');
+    setWorkflowDescription('');
+    setSteps([]);
+    setCurrentStep('');
+  };
+
   return (
     <Grid2 container spacing={4}>
       {/* Left Column */}
@@ -132,7 +161,8 @@ function WorkflowDesigner({ loadedWorkflow }) {
       <Grid2 item xs={12} md={8}>
         {/* Message List Section */}
 
-        {/* Workflow Steps */}<Grid2 item xs={12} md={8}>
+        {/* Workflow Steps */}
+        <Grid2 item xs={12} md={8}>
           {/* Steps Section */}
           <Paper sx={{ padding: 2, mb: 4 }}>
             <Typography variant="h6">Workflow Steps</Typography>
@@ -149,6 +179,13 @@ function WorkflowDesigner({ loadedWorkflow }) {
                   label={`Step ${index + 1}`}
                   variant="outlined"
                 />
+                {/* Buttons to insert symbols */}
+                <Button onClick={() => handleInsertOutputSymbol(index)} sx={{ ml: 2 }}>
+                  Insert Output 📄
+                </Button>
+                <Button onClick={() => handleInsertFileSymbol(index)} sx={{ ml: 2 }}>
+                  Insert File 🗄️
+                </Button>
               </Box>
             ))}
             <TextField
@@ -166,6 +203,10 @@ function WorkflowDesigner({ loadedWorkflow }) {
               <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
                 {isLoading ? <CircularProgress size={24} /> : "Run! 🚀"}
               </Button>
+
+              <Button variant="contained" color="secondary" onClick={handleClearWorkflow}>
+                Clear Workflow
+              </Button>
             </Grid2>
 
           </Paper>
@@ -173,6 +214,9 @@ function WorkflowDesigner({ loadedWorkflow }) {
           <Paper sx={{ padding: 2, mb: 4 }}>
             <Typography variant="h6">Messages</Typography>
             <MessageList messages={messages} /> {/* Display the list of messages */}
+            <Button variant="contained" color="secondary" onClick={handleClearMessages} sx={{ mt: 2 }}>
+              Clear Messages
+            </Button>
           </Paper>
         </Grid2>
 
@@ -259,9 +303,14 @@ function WorkflowDesigner({ loadedWorkflow }) {
             variant="outlined"
             sx={{ mb: 2 }}
           />
-          <Button variant="contained" color="secondary" onClick={handleSaveWorkflow}>
-            Save Workflow
-          </Button>
+          <Grid2 container spacing={2}>
+            <Button variant="contained" color="secondary" onClick={handleSaveWorkflow}>
+              Save Workflow
+            </Button>
+            <Button variant="contained" color="secondary" onClick={handleClearWorkflow}>
+              Clear Workflow
+            </Button>
+          </Grid2>
         </Paper>
       </Grid2>
     </Grid2>
