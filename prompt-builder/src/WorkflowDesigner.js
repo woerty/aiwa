@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Box, Typography, CircularProgress, List, ListItem, ListItemText, IconButton } from '@mui/material';
+import { TextField, Button, Box, Typography, CircularProgress, List, ListItem, ListItemText, IconButton, Grid, Paper } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
@@ -10,9 +10,9 @@ function WorkflowDesigner({ loadedWorkflow }) {
   const [workflowName, setWorkflowName] = useState('');
   const [workflowDescription, setWorkflowDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null); // State for selected file
-  const [uploadedFiles, setUploadedFiles] = useState([]); // List of uploaded files
-  const [serverFiles, setServerFiles] = useState([]); // Files available on server
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [serverFiles, setServerFiles] = useState([]);
 
   useEffect(() => {
     if (loadedWorkflow) {
@@ -20,7 +20,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
       setWorkflowDescription(loadedWorkflow.description);
       setSteps(JSON.parse(loadedWorkflow.steps));
     }
-    fetchServerFiles(); // Fetch available files on the server
+    fetchServerFiles();
   }, [loadedWorkflow]);
 
   const fetchServerFiles = async () => {
@@ -69,16 +69,12 @@ function WorkflowDesigner({ loadedWorkflow }) {
     try {
       setIsLoading(true);
       const response = await axios.post('http://wodv.de:5000/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
-      // Add uploaded file to the list of uploaded files
       setUploadedFiles([...uploadedFiles, { name: selectedFile.name, path: response.data.file_path }]);
-      setSelectedFile(null); // Clear the selected file after upload
+      setSelectedFile(null);
       alert('File uploaded successfully!');
-      fetchServerFiles(); // Refresh the server files list
+      fetchServerFiles();
     } catch (error) {
       console.error('Error uploading file:', error);
     } finally {
@@ -90,7 +86,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
     try {
       await axios.post('http://wodv.de:5000/delete_file', { filename });
       alert('File deleted successfully!');
-      fetchServerFiles(); // Refresh the server files list
+      fetchServerFiles();
     } catch (error) {
       console.error('Error deleting file:', error);
     }
@@ -105,7 +101,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
     try {
       const response = await axios.post('http://wodv.de:5000/process', {
         steps,
-        file_path: uploadedFiles.length > 0 ? uploadedFiles[0].path : '', // Use the first file's path
+        file_path: uploadedFiles.length > 0 ? uploadedFiles[0].path : '',
       });
       setResults(response.data.results);
     } catch (error) {
@@ -133,137 +129,158 @@ function WorkflowDesigner({ loadedWorkflow }) {
   };
 
   return (
-    <Box>
-      <TextField
-        fullWidth
-        value={workflowName}
-        onChange={(e) => setWorkflowName(e.target.value)}
-        label="Name"
-        variant="outlined"
-        sx={{ mb: 2 }}
-      />
-      <TextField
-        fullWidth
-        value={workflowDescription}
-        onChange={(e) => setWorkflowDescription(e.target.value)}
-        label="Beschreibung"
-        variant="outlined"
-        sx={{ mb: 2 }}
-      />
-      {steps.map((step, index) => (
-        <Box key={index} sx={{ mb: 2 }}>
-          <TextField
-            fullWidth
-            value={step}
-            onChange={(e) => {
-              const updatedSteps = [...steps];
-              updatedSteps[index] = e.target.value;
-              setSteps(updatedSteps);
-            }}
-            label={`Step ${index + 1}`}
-            variant="outlined"
-          />
-          <Button onClick={() => handleInsertOutputSymbol(index)} sx={{ ml: 2 }}>
-            Vorherigen Output einfügen
-          </Button>
-          <Button onClick={() => handleInsertFileSymbol(index)} sx={{ ml: 2 }}>
-            Datei Output einfügen
-          </Button>
-        </Box>
-      ))}
-      <TextField
-        fullWidth
-        value={currentStep}
-        onChange={(e) => setCurrentStep(e.target.value)}
-        label="New Step"
-        variant="outlined"
-        sx={{ mb: 2 }}
-      />
-      <Button variant="contained" onClick={handleAddStep} sx={{ mr: 2 }}>
-        Step hinzufügen
-      </Button>
-      <Button variant="contained" color="secondary" onClick={handleSaveWorkflow} sx={{ mr: 2 }}>
-        Save
-      </Button>
-      
-      {/* File selection and upload */}
-      <input
-        type="file"
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-        id="fileInput"
-      />
-      <label htmlFor="fileInput">
-        <Button variant="contained" component="span" sx={{ mr: 2 }}>
-          Select File
-        </Button>
-      </label>
-      <Button variant="contained" onClick={handleFileUpload} sx={{ mr: 2 }} disabled={!selectedFile}>
-        Upload File
-      </Button>
-      
-      {selectedFile && (
-        <Typography variant="body1" sx={{ mb: 2 }}>
-          Selected file: {selectedFile.name}
-        </Typography>
-      )}
-      <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
-        {isLoading ? "Running..." : "Run! 🚀"}
-      </Button>
+    <Box sx={{ padding: 4 }}>
+      <Grid container spacing={4}>
+        {/* Workflow details */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ padding: 2 }}>
+            <Typography variant="h6">Workflow Information</Typography>
+            <TextField
+              fullWidth
+              value={workflowName}
+              onChange={(e) => setWorkflowName(e.target.value)}
+              label="Workflow Name"
+              variant="outlined"
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              value={workflowDescription}
+              onChange={(e) => setWorkflowDescription(e.target.value)}
+              label="Description"
+              variant="outlined"
+              sx={{ mb: 2 }}
+            />
+            <Button variant="contained" color="secondary" onClick={handleSaveWorkflow}>
+              Save Workflow
+            </Button>
+          </Paper>
+        </Grid>
 
-      {/* Display list of uploaded files with option to remove */}
-      {uploadedFiles.length > 0 && (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="h6">Uploaded Files:</Typography>
-          <List>
-            {uploadedFiles.map((file, index) => (
-              <ListItem key={index}>
-                <ListItemText primary={file.name} />
-                <IconButton edge="end" aria-label="delete" onClick={() => handleRemoveFileFromList(file.name)}>
-                  <DeleteIcon />
-                </IconButton>
-              </ListItem>
+        {/* Steps Section */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ padding: 2 }}>
+            <Typography variant="h6">Workflow Steps</Typography>
+            {steps.map((step, index) => (
+              <Box key={index} sx={{ mb: 2 }}>
+                <TextField
+                  fullWidth
+                  value={step}
+                  onChange={(e) => {
+                    const updatedSteps = [...steps];
+                    updatedSteps[index] = e.target.value;
+                    setSteps(updatedSteps);
+                  }}
+                  label={`Step ${index + 1}`}
+                  variant="outlined"
+                />
+                <Button onClick={() => handleInsertOutputSymbol(index)} sx={{ ml: 2 }}>
+                  Insert Output 📄
+                </Button>
+                <Button onClick={() => handleInsertFileSymbol(index)} sx={{ ml: 2 }}>
+                  Insert File 🗄️
+                </Button>
+              </Box>
             ))}
-          </List>
-        </Box>
-      )}
+            <TextField
+              fullWidth
+              value={currentStep}
+              onChange={(e) => setCurrentStep(e.target.value)}
+              label="New Step"
+              variant="outlined"
+              sx={{ mb: 2 }}
+            />
+            <Button variant="contained" onClick={handleAddStep}>
+              Add Step
+            </Button>
+          </Paper>
+        </Grid>
 
-      {/* Display list of files on server */}
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6">Files on Server:</Typography>
-        <List>
-          {serverFiles.map((file, index) => (
-            <ListItem key={index}>
-              <ListItemText primary={file} />
-              <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteFile(file)}>
-                <DeleteIcon />
-              </IconButton>
-              <Button variant="contained" onClick={() => setUploadedFiles([...uploadedFiles, { name: file, path: `uploads/${file}` }])} sx={{ ml: 2 }}>
-                Add to Workflow
+        {/* File Upload Section */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ padding: 2 }}>
+            <Typography variant="h6">Upload a File</Typography>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              id="fileInput"
+            />
+            <label htmlFor="fileInput">
+              <Button variant="contained" component="span">
+                Select File
               </Button>
-            </ListItem>
-          ))}
-        </List>
-      </Box>
+            </label>
+            <Button
+              variant="contained"
+              onClick={handleFileUpload}
+              sx={{ ml: 2 }}
+              disabled={!selectedFile}
+            >
+              Upload File
+            </Button>
+            {selectedFile && (
+              <Typography variant="body1" sx={{ mt: 2 }}>
+                Selected file: {selectedFile.name}
+              </Typography>
+            )}
+            <List>
+              {uploadedFiles.map((file, index) => (
+                <ListItem key={index}>
+                  <ListItemText primary={file.name} />
+                  <IconButton edge="end" onClick={() => handleRemoveFileFromList(file.name)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
 
-      
-      {isLoading && (
-        <Box sx={{ mt: 4 }}>
-          <CircularProgress />
-          <Typography variant="body1">Processing workflow...</Typography>
-        </Box>
-      )}
-      {!isLoading && results.length > 0 && (
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6">Results</Typography>
-          {results.map((result, index) => (
-            <Typography key={index} variant="body1">
-              Step {index + 1}: {steps[index]} <br />
-              Result: {result}
-            </Typography>
-          ))}
-        </Box>
-      )}
+        {/* Server Files Section */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ padding: 2 }}>
+            <Typography variant="h6">Files on Server</Typography>
+            <List>
+              {serverFiles.map((file, index) => (
+                <ListItem key={index}>
+                  <ListItemText primary={file} />
+                  <IconButton edge="end" onClick={() => handleDeleteFile(file)}>
+                    <DeleteIcon />
+                  </IconButton>
+                  <Button
+                    variant="contained"
+                    onClick={() => setUploadedFiles([...uploadedFiles, { name: file, path: `uploads/${file}` }])}
+                    sx={{ ml: 2 }}
+                  >
+                    Add to Workflow
+                  </Button>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+
+        {/* Results Section */}
+        <Grid item xs={12}>
+          <Paper sx={{ padding: 2 }}>
+            <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
+              {isLoading ? <CircularProgress size={24} /> : "Run! 🚀"}
+            </Button>
+            {results.length > 0 && (
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6">Results</Typography>
+                {results.map((result, index) => (
+                  <Typography key={index} variant="body1">
+                    Step {index + 1}: {steps[index]} <br />
+                    Result: {result}
+                  </Typography>
+                ))}
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 }
