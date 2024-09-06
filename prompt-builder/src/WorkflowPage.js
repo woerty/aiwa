@@ -8,7 +8,7 @@ function WorkflowPage() {
 
   // Funktion zum Laden eines Workflows
   const handleLoadWorkflow = (workflow) => {
-    setLoadedWorkflow(workflow);
+    setLoadedWorkflow(workflow);  // Übergibt den geladenen Workflow an den Designer
   };
 
   const handleDeleteWorkflow = (workflowId) => {
@@ -25,10 +25,7 @@ function WorkflowPage() {
 
       {/* Workflow Designer Section */}
       <Box sx={{ mb: 6 }}>
-        <Typography variant="h4" gutterBottom>
-          Create or Edit Workflow
-        </Typography>
-        <WorkflowDesigner loadedWorkflow={loadedWorkflow} />
+        <WorkflowDesigner loadedWorkflow={loadedWorkflow} /> {/* Übergeben des geladenen Workflows */}
       </Box>
 
       {/* List of Saved Workflows */}

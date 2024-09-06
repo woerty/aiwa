@@ -1,13 +1,27 @@
-import React, { useState } from 'react';
-import { Box } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography } from '@mui/material';
 import ThreadsList from './ThreadsList';
+import axios from "axios";
 import Chat from './Chat';
 import SavedPrompts from './SavedPrompts';
 import API_BASE_URL from './apiConfig';
 
-function Dashboard() {
-  const [selectedThreadId, setSelectedThreadId] = useState(null);
+axios.defaults.baseURL = API_BASE_URL;
 
+function Dashboard() {
+  const [userInfo, setUserInfo] = useState({ username: "", api_key: "" });
+  useEffect(() => {
+    // Fetch user info from backend
+    axios.get("/api/user-info")
+      .then(response => {
+        setUserInfo(response.data);
+      })
+      .catch(error => {
+        console.error("There was an error fetching the user info!", error);
+      });
+  }, []);
+
+  const [selectedThreadId, setSelectedThreadId] = useState(null);
   const handleSelectThread = (threadId) => {
     setSelectedThreadId(threadId);
   };
@@ -29,6 +43,9 @@ function Dashboard() {
 
       {/* Right section: Chat */}
       <Box sx={{ width: '75%' }}>
+        {/*<Typography variant="h4" gutterBottom>
+          OpenAI-Key: {userInfo.api_key}
+        </Typography>*/}
         {selectedThreadId ? <Chat threadId={selectedThreadId} /> : <p>Please select a thread to start chatting.</p>}
       </Box>
     </Box>

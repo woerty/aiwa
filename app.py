@@ -65,6 +65,35 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
+@app.route('/register', methods=['POST', 'OPTIONS'])
+def register():
+    if request.method == "OPTIONS":
+        return "", 200
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    api_key = data.get('api_key')  # Optional: falls der User direkt einen OpenAI-API-Key setzen will
+
+    # Überprüfe, ob alle erforderlichen Felder ausgefüllt sind
+    if not username or not password or not api_key:
+        return jsonify({"error": "All fields (username, password, api_key) are required"}), 400
+
+    # Überprüfe, ob der Benutzername bereits existiert
+    existing_user = User.query.filter_by(username=username).first()
+    if existing_user:
+        return jsonify({"error": "Username already exists"}), 400
+
+    # Passwort hashen
+    hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+
+    # Neuen Benutzer erstellen
+    new_user = User(username=username, password=hashed_password, api_key=api_key)
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({"message": "User registered successfully!"}), 201
+
+
 @app.route("/submit", methods=["POST"])
 @login_required
 def submit():
@@ -89,7 +118,7 @@ def submit():
 
     # Make request to OpenAI
     response = openai.chat.completions.create(
-        model="gpt-4o-mini", messages=messages, max_tokens=100
+        model="gpt-4o-mini", messages=messages, max_tokens=1000
     )
     response_text = response.choices[0].message.content.strip()
 
@@ -205,6 +234,23 @@ def get_messages(thread_id):
 
     return jsonify(messages_data), 200
 
+@app.route('/delete_workflow/<int:workflow_id>', methods=['DELETE', 'OPTIONS'])
+@login_required
+def delete_workflow(workflow_id):
+    if request.method == "OPTIONS":
+        return "", 200
+    
+    workflow = Workflow.query.get(workflow_id)
+    
+    if not workflow or workflow.user_id != current_user.id:
+        return jsonify({"error": "Workflow not found or unauthorized"}), 404
+    
+    db.session.delete(workflow)
+    db.session.commit()
+    
+    return jsonify({"message": "Workflow deleted successfully!"}), 200
+
+
 @app.route('/delete_thread/<int:thread_id>', methods=['DELETE'])
 @login_required
 def delete_thread(thread_id):
@@ -244,7 +290,7 @@ def send_message():
     response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=chat_history,
-        max_tokens=100
+        max_tokens=1000
     )
     response_text = response.choices[0].message.content.strip()
     # Save the assistant's response
@@ -284,36 +330,37 @@ def get_workflows():
 @app.route('/submit_workflow', methods=['POST'])
 @login_required
 def submit_workflow():
-    data = request.get_json()
-    steps = data.get('steps')
-    
-    if not steps:
-        return jsonify({"error": "No steps provided"}), 400
+    try:
+        data = request.get_json()
+        steps = data.get('steps')
 
-    results = []
-    previous_output = None
+        if not steps:
+            return jsonify({"error": "No steps provided"}), 400
 
-    # Verarbeite jeden Schritt nacheinander
-    for step in steps:
-        prompt = step
-        if previous_output:
-            prompt = prompt.replace('⬤', previous_output)
-        
-        # Sende das prompt an OpenAI
-        messages = [
-            {"role": "system", "content": "you are a helpful assistant"},
-            {"role": "user", "content": prompt},
-        ]
+        results = []
+        previous_output = None
 
-        openai.api_key = current_user.api_key
-        response = openai.chat.completions.create(
-            model="gpt-4o", messages=messages, max_tokens=100
-        )
-        output = response.choices[0].message.content.strip()
-        results.append(output)
-        previous_output = output
+        for step in steps:
+            prompt = step
+            if previous_output:
+                prompt = prompt.replace('📄', previous_output)  # Ersetze Symbol durch vorherigen Output
 
-    return jsonify({"results": results}), 200
+            messages = [
+                {"role": "system", "content": "you are a helpful assistant"},
+                {"role": "user", "content": prompt},
+            ]
+
+            openai.api_key = current_user.api_key
+            response = openai.chat.completions.create(
+                model="gpt-4o-mini", messages=messages, max_tokens=1000
+            )
+            output = response.choices[0].message.content.strip()
+            results.append(output)
+            previous_output = output
+
+        return jsonify({"results": results}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
