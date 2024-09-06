@@ -8,6 +8,8 @@ from flask_login import (
     logout_user,
     current_user,
 )
+
+from flask import send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
@@ -392,6 +394,36 @@ def upload_file():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(file_path)
         return jsonify({"message": "File uploaded successfully", "file_path": file_path}), 200
+
+
+@app.route('/list_files', methods=['GET'])
+@login_required
+def list_files():
+    try:
+        files = os.listdir(app.config['UPLOAD_FOLDER'])
+        return jsonify(files), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/delete_file', methods=['POST'])
+@login_required
+def delete_file():
+    data = request.get_json()
+    filename = data.get('filename')
+
+    if not filename:
+        return jsonify({"error": "Filename is required"}), 400
+
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    if not os.path.exists(file_path):
+        return jsonify({"error": "File does not exist"}), 404
+
+    try:
+        os.remove(file_path)
+        return jsonify({"message": "File deleted successfully!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 def process_workflow_steps(steps, file_content):
     results = []

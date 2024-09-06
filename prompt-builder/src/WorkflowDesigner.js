@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Box, Typography, CircularProgress } from '@mui/material';
+import { TextField, Button, Box, Typography, CircularProgress, List, ListItem, ListItemText, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
 function WorkflowDesigner({ loadedWorkflow }) {
@@ -10,7 +11,8 @@ function WorkflowDesigner({ loadedWorkflow }) {
   const [workflowDescription, setWorkflowDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null); // State for selected file
-  const [uploadedFilePath, setUploadedFilePath] = useState(''); // State for uploaded file path
+  const [uploadedFiles, setUploadedFiles] = useState([]); // List of uploaded files
+  const [serverFiles, setServerFiles] = useState([]); // Files available on server
 
   useEffect(() => {
     if (loadedWorkflow) {
@@ -18,7 +20,17 @@ function WorkflowDesigner({ loadedWorkflow }) {
       setWorkflowDescription(loadedWorkflow.description);
       setSteps(JSON.parse(loadedWorkflow.steps));
     }
+    fetchServerFiles(); // Fetch available files on the server
   }, [loadedWorkflow]);
+
+  const fetchServerFiles = async () => {
+    try {
+      const response = await axios.get('http://wodv.de:5000/list_files');
+      setServerFiles(response.data);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+    }
+  };
 
   const handleAddStep = () => {
     if (currentStep.trim()) {
@@ -46,11 +58,14 @@ function WorkflowDesigner({ loadedWorkflow }) {
   };
 
   const handleFileUpload = async () => {
-    if (!selectedFile) return;
-  
+    if (!selectedFile) {
+      alert("Please select a file first.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append('file', selectedFile);
-  
+
     try {
       setIsLoading(true);
       const response = await axios.post('http://wodv.de:5000/upload', formData, {
@@ -58,22 +73,39 @@ function WorkflowDesigner({ loadedWorkflow }) {
           'Content-Type': 'multipart/form-data',
         },
       });
-      setUploadedFilePath(response.data.file_path);
+      
+      // Add uploaded file to the list of uploaded files
+      setUploadedFiles([...uploadedFiles, { name: selectedFile.name, path: response.data.file_path }]);
+      setSelectedFile(null); // Clear the selected file after upload
       alert('File uploaded successfully!');
+      fetchServerFiles(); // Refresh the server files list
     } catch (error) {
       console.error('Error uploading file:', error);
     } finally {
       setIsLoading(false);
     }
   };
-  
-  
+
+  const handleDeleteFile = async (filename) => {
+    try {
+      await axios.post('http://wodv.de:5000/delete_file', { filename });
+      alert('File deleted successfully!');
+      fetchServerFiles(); // Refresh the server files list
+    } catch (error) {
+      console.error('Error deleting file:', error);
+    }
+  };
+
+  const handleRemoveFileFromList = (fileName) => {
+    setUploadedFiles(uploadedFiles.filter(file => file.name !== fileName));
+  };
+
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
       const response = await axios.post('http://wodv.de:5000/process', {
         steps,
-        file_path: uploadedFilePath,
+        file_path: uploadedFiles.length > 0 ? uploadedFiles[0].path : '', // Use the first file's path
       });
       setResults(response.data.results);
     } catch (error) {
@@ -153,15 +185,68 @@ function WorkflowDesigner({ loadedWorkflow }) {
       <Button variant="contained" color="secondary" onClick={handleSaveWorkflow} sx={{ mr: 2 }}>
         Save
       </Button>
-      <input type="file" onChange={handleFileChange} style={{ display: 'none' }} id="fileInput" />
+      
+      {/* File selection and upload */}
+      <input
+        type="file"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+        id="fileInput"
+      />
       <label htmlFor="fileInput">
-        <Button variant="contained" component="span" onClick={handleFileUpload} sx={{ mr: 2 }}>
-          Upload File
+        <Button variant="contained" component="span" sx={{ mr: 2 }}>
+          Select File
         </Button>
       </label>
+      <Button variant="contained" onClick={handleFileUpload} sx={{ mr: 2 }} disabled={!selectedFile}>
+        Upload File
+      </Button>
+      
+      {selectedFile && (
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          Selected file: {selectedFile.name}
+        </Typography>
+      )}
       <Button variant="contained" color="primary" onClick={handleSubmit} disabled={isLoading}>
         {isLoading ? "Running..." : "Run! 🚀"}
       </Button>
+
+      {/* Display list of uploaded files with option to remove */}
+      {uploadedFiles.length > 0 && (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="h6">Uploaded Files:</Typography>
+          <List>
+            {uploadedFiles.map((file, index) => (
+              <ListItem key={index}>
+                <ListItemText primary={file.name} />
+                <IconButton edge="end" aria-label="delete" onClick={() => handleRemoveFileFromList(file.name)}>
+                  <DeleteIcon />
+                </IconButton>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
+
+      {/* Display list of files on server */}
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h6">Files on Server:</Typography>
+        <List>
+          {serverFiles.map((file, index) => (
+            <ListItem key={index}>
+              <ListItemText primary={file} />
+              <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteFile(file)}>
+                <DeleteIcon />
+              </IconButton>
+              <Button variant="contained" onClick={() => setUploadedFiles([...uploadedFiles, { name: file, path: `uploads/${file}` }])} sx={{ ml: 2 }}>
+                Add to Workflow
+              </Button>
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+
+      
       {isLoading && (
         <Box sx={{ mt: 4 }}>
           <CircularProgress />
