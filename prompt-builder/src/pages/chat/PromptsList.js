@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, Typography, Button, Box } from '@mui/material';
-import API_BASE_URL from './apiConfig';
+import API_BASE_URL from '../../hooks/apiConfig';
 
 function PromptsList({ prompts, onDelete, onLoad }) {
   return (

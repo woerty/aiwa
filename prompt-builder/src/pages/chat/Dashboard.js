@@ -4,7 +4,7 @@ import ThreadsList from './ThreadsList';
 import axios from "axios";
 import Chat from './Chat';
 import SavedPrompts from './SavedPrompts';
-import API_BASE_URL from './apiConfig';
+import API_BASE_URL from '../../hooks/apiConfig';
 
 axios.defaults.baseURL = API_BASE_URL;
 

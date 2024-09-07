@@ -1,9 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import LoginForm from './LoginForm';
-import RegisterForm from './RegisterForm';
-import Dashboard from './Dashboard';
-import WorkflowPage from './WorkflowPage';  // Importiere die neue Workflow-Seite
+import LoginForm from './pages/login/LoginForm';
+import RegisterForm from './pages/register/RegisterForm';
+import Dashboard from './pages/chat/Dashboard';
+import WorkflowPage from './pages/designer/WorkflowPage';
 
 function App() {
   return (

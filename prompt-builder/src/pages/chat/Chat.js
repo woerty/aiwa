@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, List, ListItem } from '@mui/material';
 import axios from 'axios';
-import API_BASE_URL from './apiConfig';
+import API_BASE_URL from '../../hooks/apiConfig';
 
 function Chat({ threadId }) {
   const [messages, setMessages] = useState([]);

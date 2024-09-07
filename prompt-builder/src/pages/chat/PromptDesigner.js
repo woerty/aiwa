@@ -3,7 +3,7 @@ import { Box, Typography } from '@mui/material';
 import PromptInput from './PromptInput';
 import PromptButtons from './PromptButtons';
 import axios from 'axios';
-import API_BASE_URL from './apiConfig';
+import API_BASE_URL from '../../hooks/apiConfig';
 
 function PromptDesigner() {
   const [prompt, setPrompt] = useState('');

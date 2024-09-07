@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Button, TextField, List, ListItem, Typography, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
-import API_BASE_URL from './apiConfig';
+import API_BASE_URL from '../../hooks/apiConfig';
 
 function ThreadsList({ onSelectThread, onDeleteThread }) {
   const [threads, setThreads] = useState([]);

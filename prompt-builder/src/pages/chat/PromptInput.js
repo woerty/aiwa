@@ -1,7 +1,7 @@
 import React from 'react';
 import { TextareaAutosize, IconButton, Box } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import API_BASE_URL from './apiConfig';
+import API_BASE_URL from '../../hooks/apiConfig';
 
 function PromptInput({ prompt, setPrompt, handleClearPrompt }) {
   return (

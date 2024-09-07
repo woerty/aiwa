@@ -5,8 +5,10 @@ import axios from 'axios';
 import StepsSection from './StepsSection';
 import WorkflowVisualization from './WorkflowVisualization';
 import MessageList from './MessageList'; // Assuming you have a message list component
+import WorkflowsList from './WorkflowsList';
 
-function WorkflowDesigner({ loadedWorkflow }) {
+
+function WorkflowDesigner() {
   const [steps, setSteps] = useState([]);
   const [currentStep, setCurrentStep] = useState('');
   const [results, setResults] = useState([]);
@@ -17,6 +19,7 @@ function WorkflowDesigner({ loadedWorkflow }) {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [serverFiles, setServerFiles] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [loadedWorkflow, setLoadedWorkflow] = useState(null);
 
   useEffect(() => {
     if (loadedWorkflow) {
@@ -26,6 +29,19 @@ function WorkflowDesigner({ loadedWorkflow }) {
     }
     fetchServerFiles();
   }, [loadedWorkflow]);
+
+
+  
+  // Funktion zum Laden eines Workflows
+  const handleLoadWorkflow = (workflow) => {
+    setLoadedWorkflow(workflow);  // Übergibt den geladenen Workflow an den Designer
+  };
+
+  const handleDeleteWorkflow = (workflowId) => {
+    if (loadedWorkflow && loadedWorkflow.id === workflowId) {
+      setLoadedWorkflow(null); // Wenn der geladene Workflow gelöscht wurde, zurücksetzen
+    }
+  };
 
   const fetchServerFiles = async () => {
     try {
@@ -165,6 +181,8 @@ function WorkflowDesigner({ loadedWorkflow }) {
     setSteps(updatedSteps);
   };
 
+
+
   return (
     <Grid2 container spacing={4}>
       {/* Left Column: Steps, Inputs, and Buttons */}
@@ -297,6 +315,10 @@ function WorkflowDesigner({ loadedWorkflow }) {
           <WorkflowVisualization steps={steps} uploadedFiles={uploadedFiles} />
         </Paper>
       </Grid2>
+
+      <Box>
+        <WorkflowsList onLoadWorkflow={handleLoadWorkflow} onDeleteWorkflow={handleDeleteWorkflow} />
+      </Box>
     </Grid2>
   );
 }
