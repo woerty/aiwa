@@ -20,7 +20,7 @@ function LoginForm() {
         password,
       }, { withCredentials: true });
       if (response.data.success) {
-        navigate('/dashboard');
+        navigate('/workflows');
       } else {
         alert('Login failed');
       }
