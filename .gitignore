@@ -3,3 +3,5 @@ env
 node_modules
 prompt-builder/node_modules
 uploads
+database.db
+instance
